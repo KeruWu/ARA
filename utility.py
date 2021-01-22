@@ -13,7 +13,7 @@ def u_D(d, a, s, theta):
         s = [q, r, w]: State
         theta: Random event
     Returns:
-        Utility value.
+        Utility value. Yes
     """
     return d + a + s[0] + s[1] + s[2] + theta
 
