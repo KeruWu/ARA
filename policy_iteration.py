@@ -1,6 +1,6 @@
 import numpy as np
 from utility import Reward
-from transition import trans_prob
+from transition import trans_prob, new_w, h_normalize
 from State import Defender_actions, K
 
 def All_states():
@@ -40,9 +40,11 @@ def same(policy1, policy2):
     Returns:
         Logical True or False.
     """
-
-    return False
-
+    States = All_states()
+    for s in All_states():
+        if policy1(s) != policy2(s):
+            return False
+    return True
 
 def Policy_iteration(m, tau, c, gamma = 0.1, order= 0, max_iter = 100, seed = 17):
     """
@@ -76,9 +78,12 @@ def Policy_iteration(m, tau, c, gamma = 0.1, order= 0, max_iter = 100, seed = 17
 
         ## Transition probability matrix
         P = np.zeros(S, S)
-        for i, next_s in enumerate(States):
-            for j, s in enumerate(States):
-                P[i, j] = trans_prob(next_s, pi(s), s, m, tau, c)
+        for j, s in enumerate(States):
+            next_w = new_w(pi(s), m, s, tau)
+            dict_h = h_normalize(next_w, pi(s), s, c)
+            for i, next_s in enumerate(States):
+                if np.all(next_s[2] == next_w):
+                    P[i, j] = trans_prob(next_s, pi(s), s, m, tau, c, dict_h)
 
         ## Policy evaluation
         V = np.matmul(np.linalg.inv(np.identity(S)-gamma*P), R)
@@ -90,8 +95,11 @@ def Policy_iteration(m, tau, c, gamma = 0.1, order= 0, max_iter = 100, seed = 17
             for d in K(s, c):
                 V_curr = Reward(prev_pi(s), s, order)
                 ## the following iteration can be improved
+                next_w = new_w(d, m, s, tau)
+                dict_h = h_normalize(next_w, d, s, c)
                 for s_cand in States:
-                    V_curr += gamma*trans_prob(s_cand, d, s, m, tau, c)
+                    if np.all(s_cand[2] == next_w):
+                        V_curr += gamma*trans_prob(s_cand, d, s, m, tau, c, dict_h)
                 if V_curr > best_V:
                     best_d = d
             return best_d

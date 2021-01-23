@@ -1,6 +1,6 @@
 import numpy as np
 
-def a_given_s(a, s, order = 0):
+def a_given_s(a, s, order = 0, Case_Study = 'Airport Security'):
     """
     Defender's belief about the attacker's actions.
     Args:
@@ -12,7 +12,17 @@ def a_given_s(a, s, order = 0):
     """
     if order == 0:
         ## Zeroth-Order ARA
-        return 1
+        if Case_Study == 'Airport Security':
+            prob = 1
+            if a[0] == 1:
+                prob *= 1e-9
+            if a[1] == 1:
+                prob *= 5e-8
+            if a[2] == 1:
+                prob *= 3.33e-8
+            return prob
+        else:
+            return 1
     elif order == 1:
         ## First-Order ARA
         return 1

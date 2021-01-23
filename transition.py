@@ -50,9 +50,9 @@ def attraction_h(next_r, next_w, d, a, s):
     return 1
 
 
-def attraction_q(next_q, next_r, next_w, d, a, s):
+def attraction_g(next_q, next_r, next_w, d, a, s):
     """
-    Attraction function of operational conditions (h in the paper).
+    Attraction function of operational conditions (g in the paper).
     Args:
         next_q: Operational conditions in the next epoch.
         next_r: Probable resource array in the next epoch.
@@ -66,7 +66,51 @@ def attraction_q(next_q, next_r, next_w, d, a, s):
     return 1
 
 
-def trans_prob(next_s, d, s, m, tau, c, order = 0):
+def h_normalize(next_w, d, s, c):
+    """
+    Precompute denominator values for attraction function h
+    Args:
+        next_w = Multi-period commitments in the next epoch.
+        d: Defender's actions
+        s = [q, r, w]: Current State
+        c (nr * nd): cost of defender's each action
+    Returns:
+        all_h_normalize: A map which maps string representation of action to its corresponding value.
+    """
+    A_actions = Attacker_actions(s)
+    all_h_normalize = {}
+    for a in A_actions:
+        r_normalize = 0
+        for r_cand in Resources(s, c):
+            r_normalize += attraction_h(r_cand, next_w, d, a, s)
+        all_h_normalize[str(a)] = r_normalize
+    return all_h_normalize
+
+
+"""
+def g_normalize(next_r, next_w, d, s):
+    
+     Precompute denominator values for attraction function g
+     Args:
+         next_r: Probable resource array in the next epoch.
+         next_w = Multi-period commitments in the next epoch.
+         d: Defender's actions
+         s = [q, r, w]: Current State
+     Returns:
+         all_g_normalize: A map which maps string representation of action to its corresponding value.
+    
+    A_actions = Attacker_actions(s)
+    all_g_normalize = {}
+    for a in A_actions:
+        q_normalize = 0
+        for q_cand in Op_conditions(s):
+            q_normalize += attraction_g(q_cand, next_r, next_w, d, a, s)
+        all_g_normalize[str(a)] = q_normalize
+    return all_g_normalize
+"""
+
+
+def trans_prob(next_s, d, s, m, tau, c, dict_h, order = 0):
     """
     Probability of decision d from state s to state next_s
     Args:
@@ -76,6 +120,7 @@ def trans_prob(next_s, d, s, m, tau, c, order = 0):
         m: Number of non multi-period commitments. (i.e. The first m defender's actions are not multi-period)
         tau: An array denoting the length of each multi-period commitment.
         c (nr * nd): cost of defender's each action
+        dict_h: Dictionary of denominator values for h
         order: Order of ARA. Currently only 0 and 1 are available.
     Returns:
         prob: Probability.
@@ -91,14 +136,17 @@ def trans_prob(next_s, d, s, m, tau, c, order = 0):
     prob = 0
 
     for a in A_actions:
-        r_normalize = 0
-        for r_cand in Resources(s, c):
-            r_normalize += attraction_h(r_cand, next_w, d, a, s)
-        prob_r = attraction_h(next_r, next_w, d, a, s) / r_normalize
+        # r_normalize = 0
+        # for r_cand in Resources(s, c):
+        #    r_normalize += attraction_h(r_cand, next_w, d, a, s)
+        # prob_r = attraction_h(next_r, next_w, d, a, s) / r_normalize
+        prob_r = attraction_h(next_r, next_w, d, a, s) / dict_h(str(a))
+
         q_normalize = 0
         for q_cand in Op_conditions(s):
-            q_normalize += attraction_q(q_cand, next_r, next_w, d, a, s)
-        prob_q = attraction_q(next_q, next_r, next_w, d, a, s) / q_normalize
+            q_normalize += attraction_g(q_cand, next_r, next_w, d, a, s)
+        prob_q = attraction_g(next_q, next_r, next_w, d, a, s) / q_normalize
+
         prob += a_given_s(a, s, order) * prob_r * prob_q
 
     return prob
