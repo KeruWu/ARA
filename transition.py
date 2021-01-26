@@ -1,6 +1,6 @@
 import numpy as np
 from ARA import a_given_s
-from State import Attacker_actions, Op_conditions, Resources
+from State import Attacker_actions, Op_conditions, R0
 
 def theta_given_s(theta, s):
     """
@@ -11,6 +11,7 @@ def theta_given_s(theta, s):
     Returns:
         Unnormalized probability of the random event.
     """
+    q, r, w = s
     return 1
 
 
@@ -35,7 +36,7 @@ def new_w(d, m, s, tau):
     return next_w
 
 
-def attraction_h(next_r, next_w, d, a, s):
+def attraction_h(next_r, next_w, d, a, s, rho_da, rho_qd, thres=0.8):
     """
     Attraction function of resource (h in the paper).
     Args:
@@ -44,13 +45,32 @@ def attraction_h(next_r, next_w, d, a, s):
         d: Defender's actions
         a: Attacker's actions
         s = [q, r, w]: Current State
+        rho_da: A map mapping from (d, a) to response quality
+        rho_qd: A map mapping from (q, d) to response quality
+        thres: Threshold for a good response.
     Returns:
         Attraction value.
     """
-    return 1
+    q, r, w = s
+    rho_1 = rho_da[str(d) + str(a)]
+    rho_2 = rho_qd[str(q) + str(d)]
+    rho = rho_1 + rho_2
+    if rho > thres:
+        more = 1
+        less = 1.2
+    else:
+        more = 0.8
+        less = 0.8
+    h = 0
+    for i in range(len(r)):
+        if next_r[i] > r[i]:
+            h += more * rho
+        else:
+            h += less * rho
+    return h
 
 
-def attraction_g(next_q, next_r, next_w, d, a, s):
+def attraction_g(next_q, next_r, next_w, d, a, s, rho_da, rho_qd, thres=0.8):
     """
     Attraction function of operational conditions (g in the paper).
     Args:
@@ -60,10 +80,29 @@ def attraction_g(next_q, next_r, next_w, d, a, s):
         d: Defender's actions
         a: Attacker's actions
         s = [q, r, w]: Current State
+        rho_da: A map mapping from (d, a) to response quality
+        rho_qd: A map mapping from (q, d) to response quality
+        thres: Threshold for a good response.
     Returns:
         Attraction value.
     """
-    return 1
+    q, r, w = s
+    rho_1 = rho_da[str(d) + str(a)]
+    rho_2 = rho_qd[str(q) + str(d)]
+    rho = rho_1 + rho_2
+    if rho > thres:
+        more = 1
+        less = 1.2
+    else:
+        more = 0.8
+        less = 0.8
+    h = 0
+    for i in range(len(q)):
+        if next_q[i] > q[i]:
+            h += more * rho
+        else:
+            h += less * rho
+    return h
 
 
 def h_normalize(next_w, d, s, c):
@@ -81,7 +120,7 @@ def h_normalize(next_w, d, s, c):
     all_h_normalize = {}
     for a in A_actions:
         r_normalize = 0
-        for r_cand in Resources(s, c):
+        for r_cand in R0(s, c):
             r_normalize += attraction_h(r_cand, next_w, d, a, s)
         all_h_normalize[str(a)] = r_normalize
     return all_h_normalize
@@ -137,7 +176,7 @@ def trans_prob(next_s, d, s, m, tau, c, dict_h, order = 0):
 
     for a in A_actions:
         # r_normalize = 0
-        # for r_cand in Resources(s, c):
+        # for r_cand in R0(s, c):
         #    r_normalize += attraction_h(r_cand, next_w, d, a, s)
         # prob_r = attraction_h(next_r, next_w, d, a, s) / r_normalize
         prob_r = attraction_h(next_r, next_w, d, a, s) / dict_h(str(a))

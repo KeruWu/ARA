@@ -15,12 +15,22 @@ def u_D(d, a, s, theta):
     Returns:
         Utility value. Yes
     """
-    return d + a + s[0] + s[1] + s[2] + theta
+    q, r, w = s
+    ## Attacker Favorable
+    if theta[0] == 0:
+        u = 1
+    ## Neutral
+    elif theta[0] == 1:
+        u = 1
+    ## Defender Favorable
+    else:
+        u = 1
+    return u
 
 
 def Reward(d, s, order=0):
     """
-    Defender's instant reward of action d at state s.
+    Defender's immediate reward of action d at state s.
     Args:
         d: Defender's actions
         s = [q, r, w]: State

@@ -1,9 +1,9 @@
 import numpy as np
 from utility import Reward
 from transition import trans_prob, new_w, h_normalize
-from State import Defender_actions, K
+from State import *
 
-def All_states():
+def All_states(Case_Study = 'Airport Security'):
     """
     Enumerating all possible states.
     Args:
@@ -11,8 +11,28 @@ def All_states():
     Returns:
         l: List of all states.
     """
-    l = []
-    return l
+    if Case_Study == 'Airport Security':
+
+        l = []
+
+        qs = Op_conditions()
+        rs = Resources()
+
+        ws = []
+        w1 = Categorical_vectors(6)
+        w2 = Categorical_vectors(5)
+        w_iter= itertools.product(w1, w2)
+        for i1, i2 in w_iter:
+            ws.append(np.concatenate([i1, i2]))
+
+        ITER = itertools.product(qs, rs, ws)
+        for i1, i2, i3 in ITER:
+            l.append([i1, i2, i3])
+
+        return l
+    else:
+        l = []
+        return l
 
 
 def Policy_initializer(seed = 17):
