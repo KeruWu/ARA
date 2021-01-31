@@ -62,11 +62,11 @@ def attraction_h(next_r, next_w, d, a, s, rho_da, rho_dq, h_above, h_below, dict
     h = 0
     if rho > thres:
         for i in range(len(r)):
-            h += h_above[dict_r[r[i]]][dict_r[next_r[i]]]
+            h += h_above[dict_r[i][r[i]]][dict_r[i][next_r[i]]]
         return h
     else:
         for i in range(len(r)):
-            h += h_below[dict_r[r[i]]][dict_r[next_r[i]]]
+            h += h_below[dict_r[i][r[i]]][dict_r[i][next_r[i]]]
         return h
 
 
@@ -181,14 +181,14 @@ def trans_prob(next_s, d, s, m, tau, c, rho_da, rho_dq, h_above, h_below, g_abov
     for a in A_actions:
         r_normalize = 0
         for r_cand in R0(s, c):
-            r_normalize += attraction_h(r_cand, next_w, d, a, s, h_above, h_below, dict_r)
-        prob_r = attraction_h(next_r, next_w, d, a, s, h_above, h_below, dict_r) / r_normalize
+            r_normalize += attraction_h(r_cand, next_w, d, a, s, rho_da, rho_dq, h_above, h_below, dict_r)
+        prob_r = attraction_h(next_r, next_w, d, a, s, rho_da, rho_dq, h_above, h_below, dict_r) / r_normalize
         #prob_r = attraction_h(next_r, next_w, d, a, s) / dict_h(str(a))
 
         q_normalize = 0
         for q_cand in Op_conditions(s):
-            q_normalize += attraction_g(q_cand, next_r, next_w, d, a, s, g_above, g_below)
-        prob_q = attraction_g(next_q, next_r, next_w, d, a, s, g_above, g_below) / q_normalize
+            q_normalize += attraction_g(q_cand, next_r, next_w, d, a, s, rho_da, rho_dq, g_above, g_below)
+        prob_q = attraction_g(next_q, next_r, next_w, d, a, s, rho_da, rho_dq, g_above, g_below) / q_normalize
 
         prob += a_given_s(a, s, order) * prob_r * prob_q
 
