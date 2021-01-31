@@ -100,12 +100,12 @@ def Resources(s = None, Case_Study = 'Airport Security'):
 
     if Case_Study == 'Airport Security':
         rs = []
-        r1 = Categorical_vectors(1, [1e6, 2e6, 3e6])
-        r2 = Categorical_vectors(1, [1e6, 2e6, 3e6])
-        r3 = Categorical_vectors(1, [1e6, 2e6, 3e6])
-        ITER = itertools.product(r1, r2, r3)
+        r1 = Categorical_vectors(1, [1000, 2000, 3000])
+        r2 = Categorical_vectors(1, [50000, 75000, 100000])
+        #r3 = Categorical_vectors(1, [1e6, 2e6, 3e6])
+        ITER = itertools.product(r1, r2)#, r3)
         for i1, i2, i3 in ITER:
-            rs.append(np.concatenate([i1, i2, i3]))
+            rs.append(np.concatenate([i1, i2]))#, i3]))
         return rs
     else:
         rs = []
@@ -125,12 +125,12 @@ def R0(s, c, resources):
     resources_satisfied = []
     q, r, w = s
     c1, c2 = c
-    curr_c = np.zeros_like(c1)
+    curr_c = c1.copy()
     for i in range(len(w)):
         if w[i] == 0:
-            curr_c[:, i] = c1[:, i]
+            curr_c[:, i+len(c1.shape[1])-len(w)] = c1[:, i+len(c1.shape[1])-len(w)]
         else:
-            curr_c[:, i] = c2[:, i]
+            curr_c[:, i+len(c1.shape[1])-len(w)] = c2[:, i+len(c1.shape[1])-len(w)]
     tmp = np.zeros(curr_c.shape[1])
     for i in range(len(tmp), len(tmp)-len(w), -1):
         if w[i-(len(tmp)-len(w))-1]>0:
@@ -167,11 +167,12 @@ def Defender_actions(s = None, Case_Study = 'Airport Security'):
         actions = []
         d1 = Binary_vectors(1)
         d2_5 = One_hot_vectors(4)
-        d6 = Binary_vectors(1)
-        d7_8 = One_hot_vectors(2)
-        d9 = Binary_vectors(1)
-        d10_12 = Binary_vectors(3)
-        ITER = itertools.product(d1, d2_5, d6, d7_8, d9, d10_12)
+        d6_8 = Binary_vectors(3)
+        d9_10 = One_hot_vectors(2)
+        d11 = Binary_vectors(1)
+        d12 = Binary_vectors(1)
+
+        ITER = itertools.product(d1, d2_5, d6_8, d9_10, d11, d12)
         for i1, i2, i3, i4, i5, i6 in ITER:
             actions.append(np.concatenate([i1, i2, i3, i4, i5, i6]))
         return actions
@@ -194,12 +195,12 @@ def K(s, c, actions):
     actions_satisfied = []
     q, r, w = s
     c1, c2 = c
-    curr_c = np.zeros_like(c1)
+    curr_c = c1.copy()
     for i in range(len(w)):
         if w[i] == 0:
-            curr_c[:, i] = c1[:, i]
+            curr_c[:, i+len(c1.shape[1])-len(w)] = c1[:, i+len(c1.shape[1])-len(w)]
         else:
-            curr_c[:, i] = c2[:, i]
+            curr_c[:, i+len(c1.shape[1])-len(w)] = c2[:, i+len(c1.shape[1])-len(w)]
 
     for d in actions:
         satisfy = True

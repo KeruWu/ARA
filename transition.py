@@ -36,7 +36,7 @@ def new_w(d, m, s, tau):
     return next_w
 
 
-def attraction_h(next_r, next_w, d, a, s, rho_da, rho_qd, thres=0.8):
+def attraction_h(next_r, next_w, d, a, s, rho_da, rho_dq, h_above, h_below, dict_r, thres=5):
     """
     Attraction function of resource (h in the paper).
     Args:
@@ -45,32 +45,32 @@ def attraction_h(next_r, next_w, d, a, s, rho_da, rho_qd, thres=0.8):
         d: Defender's actions
         a: Attacker's actions
         s = [q, r, w]: Current State
-        rho_da: A map mapping from (d, a) to response quality
-        rho_qd: A map mapping from (q, d) to response quality
+        rho_da: A map mapping from (d_i, a_j) to response quality
+        rho_dq: A map mapping from (d_i, q) to response quality
+        h_above: attraction value when response quality is above threshold
+        h_below: attraction value when response quality is below threshold
+        dict_r: map resource to corresponding level.
         thres: Threshold for a good response.
     Returns:
         Attraction value.
     """
     q, r, w = s
-    rho_1 = rho_da[str(d) + str(a)]
-    rho_2 = rho_qd[str(q) + str(d)]
+    rho_1 = np.dot(np.matmul(d, rho_da), a)
+    rho_2 = np.sum(rho_dq[:,q[0]])
+
     rho = rho_1 + rho_2
-    if rho > thres:
-        more = 1
-        less = 1.2
-    else:
-        more = 0.8
-        less = 0.8
     h = 0
-    for i in range(len(r)):
-        if next_r[i] > r[i]:
-            h += more * rho
-        else:
-            h += less * rho
-    return h
+    if rho > thres:
+        for i in range(len(r)):
+            h += h_above[dict_r[r[i]]][dict_r[next_r[i]]]
+        return h
+    else:
+        for i in range(len(r)):
+            h += h_below[dict_r[r[i]]][dict_r[next_r[i]]]
+        return h
 
 
-def attraction_g(next_q, next_r, next_w, d, a, s, rho_da, rho_qd, thres=0.8):
+def attraction_g(next_q, next_r, next_w, d, a, s, rho_da, rho_dq, g_above, g_below, thres=5):
     """
     Attraction function of operational conditions (g in the paper).
     Args:
@@ -80,33 +80,33 @@ def attraction_g(next_q, next_r, next_w, d, a, s, rho_da, rho_qd, thres=0.8):
         d: Defender's actions
         a: Attacker's actions
         s = [q, r, w]: Current State
-        rho_da: A map mapping from (d, a) to response quality
-        rho_qd: A map mapping from (q, d) to response quality
+        rho_da: A map mapping from (d_i, a_j) to response quality
+        rho_dq: A map mapping from (d_i, q) to response quality
+        g_above: attraction value when response quality is above threshold
+        g_below: attraction value when response quality is below threshold
         thres: Threshold for a good response.
     Returns:
         Attraction value.
     """
     q, r, w = s
-    rho_1 = rho_da[str(d) + str(a)]
-    rho_2 = rho_qd[str(q) + str(d)]
+    rho_1 = np.dot(np.matmul(d, rho_da), a)
+    rho_2 = np.sum(rho_dq[:, q[0]])
+
     rho = rho_1 + rho_2
+    g = 0
     if rho > thres:
-        more = 1
-        less = 1.2
+        for i in range(len(q)):
+            g += g_above[q[i]][next_q[i]]
+        return g
     else:
-        more = 0.8
-        less = 0.8
-    h = 0
-    for i in range(len(q)):
-        if next_q[i] > q[i]:
-            h += more * rho
-        else:
-            h += less * rho
-    return h
+        for i in range(len(q)):
+            g += g_below[q[i]][next_q[i]]
+        return g
 
 
+"""
 def h_normalize(next_w, d, s, c):
-    """
+    
     Precompute denominator values for attraction function h
     Args:
         next_w = Multi-period commitments in the next epoch.
@@ -115,7 +115,7 @@ def h_normalize(next_w, d, s, c):
         c (nr * nd): cost of defender's each action
     Returns:
         all_h_normalize: A map which maps string representation of action to its corresponding value.
-    """
+    
     A_actions = Attacker_actions(s)
     all_h_normalize = {}
     for a in A_actions:
@@ -126,7 +126,7 @@ def h_normalize(next_w, d, s, c):
     return all_h_normalize
 
 
-"""
+
 def g_normalize(next_r, next_w, d, s):
     
      Precompute denominator values for attraction function g
@@ -149,7 +149,7 @@ def g_normalize(next_r, next_w, d, s):
 """
 
 
-def trans_prob(next_s, d, s, m, tau, c, dict_h, order = 0):
+def trans_prob(next_s, d, s, m, tau, c, rho_da, rho_dq, h_above, h_below, g_above, g_below, dict_r, order = 0):
     """
     Probability of decision d from state s to state next_s
     Args:
@@ -159,7 +159,11 @@ def trans_prob(next_s, d, s, m, tau, c, dict_h, order = 0):
         m: Number of non multi-period commitments. (i.e. The first m defender's actions are not multi-period)
         tau: An array denoting the length of each multi-period commitment.
         c (nr * nd): cost of defender's each action
-        dict_h: Dictionary of denominator values for h
+        h_above: attraction value when response quality is above threshold
+        h_below: attraction value when response quality is below threshold
+        g_above: attraction value when response quality is above threshold
+        g_below: attraction value when response quality is below threshold
+        dict_r: map resource to corresponding level.
         order: Order of ARA. Currently only 0 and 1 are available.
     Returns:
         prob: Probability.
@@ -175,16 +179,16 @@ def trans_prob(next_s, d, s, m, tau, c, dict_h, order = 0):
     prob = 0
 
     for a in A_actions:
-        # r_normalize = 0
-        # for r_cand in R0(s, c):
-        #    r_normalize += attraction_h(r_cand, next_w, d, a, s)
-        # prob_r = attraction_h(next_r, next_w, d, a, s) / r_normalize
-        prob_r = attraction_h(next_r, next_w, d, a, s) / dict_h(str(a))
+        r_normalize = 0
+        for r_cand in R0(s, c):
+            r_normalize += attraction_h(r_cand, next_w, d, a, s, h_above, h_below, dict_r)
+        prob_r = attraction_h(next_r, next_w, d, a, s, h_above, h_below, dict_r) / r_normalize
+        #prob_r = attraction_h(next_r, next_w, d, a, s) / dict_h(str(a))
 
         q_normalize = 0
         for q_cand in Op_conditions(s):
-            q_normalize += attraction_g(q_cand, next_r, next_w, d, a, s)
-        prob_q = attraction_g(next_q, next_r, next_w, d, a, s) / q_normalize
+            q_normalize += attraction_g(q_cand, next_r, next_w, d, a, s, g_above, g_below)
+        prob_q = attraction_g(next_q, next_r, next_w, d, a, s, g_above, g_below) / q_normalize
 
         prob += a_given_s(a, s, order) * prob_r * prob_q
 

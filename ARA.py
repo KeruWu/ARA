@@ -16,11 +16,11 @@ def a_given_s(a, s, theta, order = 0, Case_Study = 'Airport Security'):
         if Case_Study == 'Airport Security':
             prob = 1
             if a[0] == 1:
-                prob *= 1e-9
+                prob *= 1e-7
             if a[1] == 1:
-                prob *= 5e-8
+                prob *= 5e-6
             if a[2] == 1:
-                prob *= 3.33e-8
+                prob *= 0.5
             return prob
         else:
             return 1
