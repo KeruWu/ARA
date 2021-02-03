@@ -104,7 +104,7 @@ def Resources(s = None, Case_Study = 'Airport Security'):
         r2 = Categorical_vectors(1, [50000, 75000, 100000])
         #r3 = Categorical_vectors(1, [1e6, 2e6, 3e6])
         ITER = itertools.product(r1, r2)#, r3)
-        for i1, i2, i3 in ITER:
+        for i1, i2 in ITER:
             rs.append(np.concatenate([i1, i2]))#, i3]))
         return rs
     else:
@@ -112,7 +112,7 @@ def Resources(s = None, Case_Study = 'Airport Security'):
         return rs
 
 
-def R0(s, c, resources):
+def R0(s, c, resources=Resources()):
     """
     Possible resource arrays of next state at current state s
     Args:
@@ -128,13 +128,13 @@ def R0(s, c, resources):
     curr_c = c1.copy()
     for i in range(len(w)):
         if w[i] == 0:
-            curr_c[:, i+len(c1.shape[1])-len(w)] = c1[:, i+len(c1.shape[1])-len(w)]
+            curr_c[:, i+c1.shape[1]-len(w)] = c1[:, i+c1.shape[1]-len(w)]
         else:
-            curr_c[:, i+len(c1.shape[1])-len(w)] = c2[:, i+len(c1.shape[1])-len(w)]
+            curr_c[:, i+c1.shape[1]-len(w)] = c2[:, i+c1.shape[1]-len(w)]
     tmp = np.zeros(curr_c.shape[1])
     for i in range(len(tmp), len(tmp)-len(w), -1):
         if w[i-(len(tmp)-len(w))-1]>0:
-            tmp[i] = 1
+            tmp[i-1] = 1
     for next_r in resources:
         if np.all(next_r-np.matmul(curr_c,tmp)>=0):
             resources_satisfied.append(next_r)
@@ -198,9 +198,9 @@ def K(s, c, actions):
     curr_c = c1.copy()
     for i in range(len(w)):
         if w[i] == 0:
-            curr_c[:, i+len(c1.shape[1])-len(w)] = c1[:, i+len(c1.shape[1])-len(w)]
+            curr_c[:, i+c1.shape[1]-len(w)] = c1[:, i+c1.shape[1]-len(w)]
         else:
-            curr_c[:, i+len(c1.shape[1])-len(w)] = c2[:, i+len(c1.shape[1])-len(w)]
+            curr_c[:, i+c1.shape[1]-len(w)] = c2[:, i+c1.shape[1]-len(w)]
 
     for d in actions:
         satisfy = True

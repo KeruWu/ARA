@@ -72,15 +72,16 @@ def u_D(d, a, s, theta, c):
         ca2 = 5
         ca3 = 0.2
 
-    return k_d * ((r[0]+r[1])/1000 - np.dot(curr_c.sum(0), d)) - k_a * (a[0]*ca1 + a[1]*ca2 + a[2]*ca3)
+    return k_d * ((r[0]+r[1])- np.dot(curr_c.sum(0), d)) - k_a * (a[0]*ca1 + a[1]*ca2 + a[2]*ca3)*1000
 
 
-def Reward(d, s, order=0):
+def Reward(d, s, c, order=0):
     """
     Defender's immediate reward of action d at state s.
     Args:
         d: Defender's actions
         s = [q, r, w]: State
+        c (nr * nd): cost of defender's each action: (c1: new, c2: annual)
         order: Order of ARA. Currently only 0 and 1 are available.
     Returns:
         r: Reward value.
@@ -89,7 +90,7 @@ def Reward(d, s, order=0):
     for theta in Random_events(s):
         for a in Attacker_actions(s):
             r += theta_given_s(theta, s) * a_given_s(a, s, order=order) *\
-                u_D(d, a, s, theta)
+                u_D(d, a, s, theta, c)
     return r
 
 

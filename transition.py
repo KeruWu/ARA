@@ -12,7 +12,7 @@ def theta_given_s(theta, s):
         Unnormalized probability of the random event.
     """
     q, r, w = s
-    return 1
+    return .3333
 
 
 def new_w(d, m, s, tau):
@@ -59,14 +59,14 @@ def attraction_h(next_r, next_w, d, a, s, rho_da, rho_dq, h_above, h_below, dict
     rho_2 = np.sum(rho_dq[:,q[0]])
 
     rho = rho_1 + rho_2
-    h = 0
+    h = 1
     if rho > thres:
         for i in range(len(r)):
-            h += h_above[dict_r[i][r[i]]][dict_r[i][next_r[i]]]
+            h *= h_above[dict_r[i][r[i]]][dict_r[i][next_r[i]]]
         return h
     else:
         for i in range(len(r)):
-            h += h_below[dict_r[i][r[i]]][dict_r[i][next_r[i]]]
+            h *= h_below[dict_r[i][r[i]]][dict_r[i][next_r[i]]]
         return h
 
 
@@ -93,14 +93,11 @@ def attraction_g(next_q, next_r, next_w, d, a, s, rho_da, rho_dq, g_above, g_bel
     rho_2 = np.sum(rho_dq[:, q[0]])
 
     rho = rho_1 + rho_2
-    g = 0
     if rho > thres:
-        for i in range(len(q)):
-            g += g_above[q[i]][next_q[i]]
+        g = g_above[q[0]][next_q[0]]
         return g
     else:
-        for i in range(len(q)):
-            g += g_below[q[i]][next_q[i]]
+        g = g_below[q[0]][next_q[0]]
         return g
 
 
@@ -180,15 +177,15 @@ def trans_prob(next_s, d, s, m, tau, c, rho_da, rho_dq, h_above, h_below, g_abov
 
     for a in A_actions:
         r_normalize = 0
-        for r_cand in R0(s, c):
-            r_normalize += attraction_h(r_cand, next_w, d, a, s, rho_da, rho_dq, h_above, h_below, dict_r)
-        prob_r = attraction_h(next_r, next_w, d, a, s, rho_da, rho_dq, h_above, h_below, dict_r) / r_normalize
+        #for r_cand in R0(s, c):
+        #    r_normalize += attraction_h(r_cand, next_w, d, a, s, rho_da, rho_dq, h_above, h_below, dict_r)
+        prob_r = attraction_h(next_r, next_w, d, a, s, rho_da, rho_dq, h_above, h_below, dict_r) #/ r_normalize
         #prob_r = attraction_h(next_r, next_w, d, a, s) / dict_h(str(a))
 
         q_normalize = 0
-        for q_cand in Op_conditions(s):
-            q_normalize += attraction_g(q_cand, next_r, next_w, d, a, s, rho_da, rho_dq, g_above, g_below)
-        prob_q = attraction_g(next_q, next_r, next_w, d, a, s, rho_da, rho_dq, g_above, g_below) / q_normalize
+        #for q_cand in Op_conditions(s):
+        #    q_normalize += attraction_g(q_cand, next_r, next_w, d, a, s, rho_da, rho_dq, g_above, g_below)
+        prob_q = attraction_g(next_q, next_r, next_w, d, a, s, rho_da, rho_dq, g_above, g_below) #/ q_normalize
 
         prob += a_given_s(a, s, order) * prob_r * prob_q
 

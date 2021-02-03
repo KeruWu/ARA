@@ -1,6 +1,6 @@
 import numpy as np
 
-def a_given_s(a, s, theta, order = 0, Case_Study = 'Airport Security'):
+def a_given_s(a, s, theta=None, order = 0, Case_Study = 'Airport Security'):
     """
     Defender's belief about the attacker's actions.
     Args:

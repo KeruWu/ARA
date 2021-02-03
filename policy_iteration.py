@@ -1,7 +1,9 @@
 import numpy as np
 from utility import Reward
-from transition import trans_prob, new_w, h_normalize
+from transition import trans_prob, new_w
 from State import *
+from tqdm import tqdm
+import time
 
 def All_states(Case_Study = 'Airport Security'):
     """
@@ -35,20 +37,59 @@ def All_states(Case_Study = 'Airport Security'):
         return l
 
 
-def Policy_initializer(seed = 17):
+def All_states_w(next_w, Case_Study = 'Airport Security'):
+    """
+    Enumerating all possible states with w = next_w
+    Args:
+
+    Returns:
+        next_w: Multi-period commitments in the next epoch.
+        l: List of all states.
+    """
+    if Case_Study == 'Airport Security':
+
+        l = []
+
+        qs = Op_conditions()
+        rs = Resources()
+
+        ws = [next_w]
+
+        ITER = itertools.product(qs, rs, ws)
+        for i1, i2, i3 in ITER:
+            l.append([i1, i2, i3])
+
+        return l
+    else:
+        l = []
+        return l
+
+
+
+def Policy_initializer(States, D_actions, seed = 17):
     """
     Randomly initialize a policy.
     Args:
+        States: List of all possible states.
         seed: Random seed
     Returns:
         pi: A function given input state s, outputs the action at state s
     """
-
-    def pi(s):
-        np.random.seed(seed)
-        D_actions = Defender_actions(s)
-        return np.random.choice(D_actions)
+    pi = {}
+    for s in States:
+        np.random.seed((seed + hash(str(s))) % (1 << 32))
+        idx = np.random.choice(len(D_actions))
+        pi[str(s)] = D_actions[idx]
     return pi
+
+"""
+    def pi(s):
+        np.random.seed((seed+hash(str(s)))%(1<<32))
+        D_actions = Defender_actions(s)
+        idx = np.random.choice(len(D_actions))
+        return D_actions[idx]
+    return pi
+"""
 
 
 def same(States, policy1, policy2):
@@ -62,9 +103,10 @@ def same(States, policy1, policy2):
         Logical True or False.
     """
     for s in States:
-        if policy1(s) != policy2(s):
+        if not np.all(policy1[str(s)] == policy2[str(s)]):
             return False
     return True
+
 
 def Policy_iteration(States, m, tau, c, rho_da, rho_dq, h_above, h_below, g_above, g_below, dict_r,
                      gamma = 0.1, order= 0, max_iter = 100, seed = 17):
@@ -91,49 +133,70 @@ def Policy_iteration(States, m, tau, c, rho_da, rho_dq, h_above, h_below, g_abov
         pi: Optimal policy given by policy iteration.
     """
     S = len(States)
-    pi = Policy_initializer(seed)
+    d_actions = Defender_actions()
+    pi = Policy_initializer(States, d_actions, seed)
+    prev_pi = pi
+    S_dict = {str(s):i for i, s in enumerate(States)}
 
+    for iter in tqdm(range(max_iter)):
 
-    for iter in range(max_iter):
-
-        prev_pi = pi
+        print("iter %d" % iter)
+        t1 = time.time()
         if iter > 0 and same(States, prev_pi, pi):
             break
+        prev_pi = pi
+        t2 = time.time()
+        print('Checking same pi t = %.2f' % (t2-t1))
 
         ## Reward array
         R = np.zeros(S)
         for i, s in enumerate(States):
-            R[i] = Reward(pi(s), s, order)
+            R[i] = Reward(pi[str(s)], s, c, order)
+        t3 = time.time()
+        print('Calculating reward t = %.2f' % (t3 - t2))
 
         ## Transition probability matrix
-        P = np.zeros(S, S)
-        for j, s in enumerate(States):
-            next_w = new_w(pi(s), m, s, tau)
+        P = np.zeros((S, S))
+        for j, s in tqdm(enumerate(States)):
+            next_w = new_w(pi[str(s)], m, s, tau)
+            d = pi[str(s)]
             #dict_h = h_normalize(next_w, pi(s), s, c)
             for i, next_s in enumerate(States):
                 if np.all(next_s[2] == next_w):
-                    P[i, j] = trans_prob(next_s, pi(s), s, m, tau, c,
+                    P[i, j] = trans_prob(next_s, d, s, m, tau, c,
                                          rho_da, rho_dq, h_above, h_below, g_above, g_below, dict_r) #, dict_h)
+        t4 = time.time()
+        print('Calculating P t = %.2f' % (t4 - t3))
 
         ## Policy evaluation
         V = np.matmul(np.linalg.inv(np.identity(S)-gamma*P), R)
+        t5 = time.time()
+        print('Policy evaluation, t = %.2f' % (t5 - t4))
 
         ## Policy improvment
-        def pi(s):
-            best_V = 0
+        #def pi(s):
+        pi = {}
+        for s in tqdm(States):
+            best_V = -10000000
             best_d = 0
-            for d in K(s, c):
-                V_curr = Reward(prev_pi(s), s, order)
+            for d in K(s, c, d_actions):
+                V_curr = Reward(d, s, c, order)
                 ## the following iteration can be improved
                 next_w = new_w(d, m, s, tau)
                 #dict_h = h_normalize(next_w, d, s, c)
-                for s_cand in States:
-                    if np.all(s_cand[2] == next_w):
-                        V_curr += gamma*trans_prob(s_cand, d, s, m, tau, c,
-                                                   rho_da, rho_dq, h_above, h_below, g_above, g_below, dict_r) #, dict_h)
+                States_w = All_states_w(next_w)
+                tmp = 0
+                for s_cand in States_w:
+                    #if np.all(s_cand[2] == next_w):
+                    tmp += trans_prob(s_cand, d, s, m, tau, c,
+                                               rho_da, rho_dq, h_above, h_below,
+                                               g_above, g_below, dict_r) * V[S_dict[str(s_cand)]] #, dict_h)
+                V_curr += tmp * gamma
                 if V_curr > best_V:
+                    best_V = V_curr
                     best_d = d
-            return best_d
+            pi[str(s)] = best_d
+         #   return best_d
     return pi
 
 
@@ -217,7 +280,14 @@ def main():
     dict_r = [dict_r1, dict_r2]
 
 
-    MDP = Policy_iteration(States, m=2, tau=np.array([5, 4]), c = c, rho_da = rho_da, rho_dq = rho_dq,
+    MDP = Policy_iteration(States, m=10, tau=np.array([5, 4]), c = c, rho_da = rho_da, rho_dq = rho_dq,
                            h_above=h_above, h_below=h_below, g_above=g_above, g_below=g_below,
                            dict_r=dict_r)
 
+    return MDP
+
+
+if __name__ == '__main__':
+    #print(Defender_actions())
+    #print(len(All_states()))
+    pi = main()
