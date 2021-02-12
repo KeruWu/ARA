@@ -1,6 +1,8 @@
 import numpy as np
 
-def a_given_s(a, s, theta=None, order = 0, Case_Study = 'Airport Security'):
+
+
+def a_given_s(a, q):
     """
     Defender's belief about the attacker's actions.
     Args:
@@ -11,23 +13,25 @@ def a_given_s(a, s, theta=None, order = 0, Case_Study = 'Airport Security'):
     Returns:
         Probability of attacker's action given current state.
     """
-    if order == 0:
-        ## Zeroth-Order ARA
-        if Case_Study == 'Airport Security':
-            prob = 1
-            if a[0] == 1:
-                prob *= 1e-7
-            if a[1] == 1:
-                prob *= 5e-6
-            if a[2] == 1:
-                prob *= 0.5
-            return prob
+    if q == 0:
+        if a == 0:
+            return 1.-1e-6
+        elif a == 1:
+            return 1e-7
+        elif a == 2:
+            return 2e-7
+        elif a == 3:
+            return 3e-7
         else:
-            return 1
-
-    elif order == 1:
-        ## First-Order ARA
-        return 1
-
-    else:
-        raise ValueError('Invalid ARA order')
+            return 4e-7
+    elif q == 1:
+        if a == 0:
+            return 1-1e-5
+        elif a == 1:
+            return 1e-6
+        elif a == 2:
+            return 2e-6
+        elif a == 3:
+            return 3e-6
+        else:
+            return 4e-6

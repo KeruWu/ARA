@@ -1,8 +1,8 @@
 import numpy as np
-from ARA import a_given_s
-from State import Attacker_actions, Op_conditions, R0
+from ARA import *
+from State import *
 
-def theta_given_s(theta, s):
+def theta_given_s(theta, q):
     """
     Probability of an random event theta given current state s.
     Args:
@@ -11,11 +11,18 @@ def theta_given_s(theta, s):
     Returns:
         Unnormalized probability of the random event.
     """
-    q, r, w = s
-    return .3333
+    if q == 0:
+        return .3333
+    else:
+        if theta == 0:
+            return 0.25
+        elif theta == 1:
+            return 0.25
+        else:
+            return 0.5
 
 
-def new_w(d, m, s, tau):
+def new_w(w, d):
     """
     Multi-period commitments in the next epoch.
     Args:
@@ -26,17 +33,22 @@ def new_w(d, m, s, tau):
     Returns:
         next_w: Number of decision epochs remaining in the next epoch.
     """
-    w = s[2]
-    next_w = np.zeros_like(w)
-    for i in range(m, len(d)):
-        if w[i-m] > 0:
-            next_w[i-m] = w[i-m]
-        elif d[i] > 0:
-            next_w[i-m] = tau[i-m]
-    return next_w
+
+    if w.sum() > 0:
+        next_w = w.copy()
+        next_w[next_w > 0] -= 1
+        return next_w
+    else:
+        if d[0] == 1:
+            return np.array([51,0,0])
+        elif d[1] == 1:
+            return np.array([0,51,0])
+        else:
+            return np.array([0,0,51])
 
 
-def attraction_h(next_r, next_w, d, a, s, rho_da, rho_dq, h_above, h_below, dict_r, thres=5):
+
+def attraction_h(next_r, a):
     """
     Attraction function of resource (h in the paper).
     Args:
@@ -54,23 +66,48 @@ def attraction_h(next_r, next_w, d, a, s, rho_da, rho_dq, h_above, h_below, dict
     Returns:
         Attraction value.
     """
-    q, r, w = s
-    rho_1 = np.dot(np.matmul(d, rho_da), a)
-    rho_2 = np.sum(rho_dq[:,q[0]])
+    if a == 0:
+        if next_r == 9:
+            return 0.8
+        elif next_r == 14:
+            return 0.1
+        else:
+            return 0.1
 
-    rho = rho_1 + rho_2
-    h = 1
-    if rho > thres:
-        for i in range(len(r)):
-            h *= h_above[dict_r[i][r[i]]][dict_r[i][next_r[i]]]
-        return h
+    elif a == 1:
+        if next_r == 9:
+            return 0.1
+        elif next_r == 14:
+            return 0.1
+        else:
+            return 0.8
+
+    elif a == 2:
+        if next_r == 9:
+            return 0.1
+        elif next_r == 14:
+            return 0.3
+        else:
+            return 0.6
+
+    elif a == 3:
+        if next_r == 9:
+            return 0.1
+        elif next_r == 14:
+            return 0.2
+        else:
+            return 0.7
+
     else:
-        for i in range(len(r)):
-            h *= h_below[dict_r[i][r[i]]][dict_r[i][next_r[i]]]
-        return h
+        if next_r == 9:
+            return 0.1
+        elif next_r == 14:
+            return 0.4
+        else:
+            return 0.5
 
 
-def attraction_g(next_q, next_r, next_w, d, a, s, rho_da, rho_dq, g_above, g_below, thres=5):
+def attraction_g(next_q, q, d, a):
     """
     Attraction function of operational conditions (g in the paper).
     Args:
@@ -88,65 +125,51 @@ def attraction_g(next_q, next_r, next_w, d, a, s, rho_da, rho_dq, g_above, g_bel
     Returns:
         Attraction value.
     """
-    q, r, w = s
-    rho_1 = np.dot(np.matmul(d, rho_da), a)
-    rho_2 = np.sum(rho_dq[:, q[0]])
 
-    rho = rho_1 + rho_2
-    if rho > thres:
-        g = g_above[q[0]][next_q[0]]
-        return g
+    if a == 0:
+        if next_q == 0:
+            xi_D = 8
+        else:
+            xi_D = 1
+
+    elif a == 1:
+        xi_D = 1
+
+    elif a == 2:
+        if next_q == 0:
+            xi_D = 1
+        else:
+            xi_D = 3
+
+    elif a == 3:
+        if next_q == 0:
+            xi_D = 1
+        else:
+            xi_D = 2
+
     else:
-        g = g_below[q[0]][next_q[0]]
-        return g
+        if next_q == 0:
+            xi_D = 1
+        else:
+            xi_D = 4
 
+    dqq = 0
+    if next_q == 1 and q == 0:
+        if d[3] == 1:
+            dqq = 1
+        elif np.sum(d[6:]) == 3:
+            dqq = 1
+    elif next_q == 0 and q == 1:
+        if d[5] == 1:
+            dqq = 1
+        elif np.sum(d[6:]) == 0:
+            dqq = 1
 
-"""
-def h_normalize(next_w, d, s, c):
-    
-    Precompute denominator values for attraction function h
-    Args:
-        next_w = Multi-period commitments in the next epoch.
-        d: Defender's actions
-        s = [q, r, w]: Current State
-        c (nr * nd): cost of defender's each action
-    Returns:
-        all_h_normalize: A map which maps string representation of action to its corresponding value.
-    
-    A_actions = Attacker_actions(s)
-    all_h_normalize = {}
-    for a in A_actions:
-        r_normalize = 0
-        for r_cand in R0(s, c):
-            r_normalize += attraction_h(r_cand, next_w, d, a, s)
-        all_h_normalize[str(a)] = r_normalize
-    return all_h_normalize
+    return xi_D + dqq
 
 
 
-def g_normalize(next_r, next_w, d, s):
-    
-     Precompute denominator values for attraction function g
-     Args:
-         next_r: Probable resource array in the next epoch.
-         next_w = Multi-period commitments in the next epoch.
-         d: Defender's actions
-         s = [q, r, w]: Current State
-     Returns:
-         all_g_normalize: A map which maps string representation of action to its corresponding value.
-    
-    A_actions = Attacker_actions(s)
-    all_g_normalize = {}
-    for a in A_actions:
-        q_normalize = 0
-        for q_cand in Op_conditions(s):
-            q_normalize += attraction_g(q_cand, next_r, next_w, d, a, s)
-        all_g_normalize[str(a)] = q_normalize
-    return all_g_normalize
-"""
-
-
-def trans_prob(next_s, d, s, m, tau, c, rho_da, rho_dq, h_above, h_below, g_above, g_below, dict_r, order = 0):
+def trans_prob(next_s, q, d):
     """
     Probability of decision d from state s to state next_s
     Args:
@@ -167,26 +190,20 @@ def trans_prob(next_s, d, s, m, tau, c, rho_da, rho_dq, h_above, h_below, g_abov
     """
 
     next_q, next_r, next_w = next_s
-    q, r, w = s
 
-    if not np.all(next_w==new_w(d, m, s, tau)):
-        return 0
+    A_actions = [0, 1, 2, 3, 4]
 
-    A_actions = Attacker_actions(s)
     prob = 0
 
     for a in A_actions:
-        r_normalize = 0
-        #for r_cand in R0(s, c):
-        #    r_normalize += attraction_h(r_cand, next_w, d, a, s, rho_da, rho_dq, h_above, h_below, dict_r)
-        prob_r = attraction_h(next_r, next_w, d, a, s, rho_da, rho_dq, h_above, h_below, dict_r) #/ r_normalize
-        #prob_r = attraction_h(next_r, next_w, d, a, s) / dict_h(str(a))
 
-        q_normalize = 0
-        #for q_cand in Op_conditions(s):
-        #    q_normalize += attraction_g(q_cand, next_r, next_w, d, a, s, rho_da, rho_dq, g_above, g_below)
-        prob_q = attraction_g(next_q, next_r, next_w, d, a, s, rho_da, rho_dq, g_above, g_below) #/ q_normalize
+        prob_r = attraction_h(next_r[0], a)
 
-        prob += a_given_s(a, s, order) * prob_r * prob_q
+        q1 = attraction_g(next_q[0], q, d, a)
+        q2 = attraction_g(1-next_q[0], q, d, a)
+        prob_q = q1 / (q1 + q2)
+
+        prob += a_given_s(a, q) * prob_r * prob_q
 
     return prob
+

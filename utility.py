@@ -1,10 +1,9 @@
 import numpy as np
-from ARA import a_given_s
-from transition import theta_given_s
-from State import Random_events, Attacker_actions
+from ARA import *
+from transition import *
+from State import *
 
-
-def u_D(d, a, s, theta, c):
+def u_D(d, a, theta, c):
     """
     Utility function of the defender.
     Args:
@@ -16,63 +15,67 @@ def u_D(d, a, s, theta, c):
     Returns:
         Utility value. Yes
     """
-    q, r, w = s
+    u = 0
 
-    ## current action cost
-    c1, c2 = c
-    curr_c = c1.copy()
-    for i in range(len(w)):
-        if w[i] == 0:
-            curr_c[:, i+len(d)-len(w)] = c1[:, i+len(d)-len(w)]
-        else:
-            curr_c[:, i+len(d)-len(w)] = c2[:, i+len(d)-len(w)]
+    ## attack effect
 
-    ## Attacker Favorable
-    if theta[0] == 0:
-        k_d = 0.5
-        k_a = 2
-    ## Neutral
-    elif theta[0] == 1:
-        k_d = 1
+    if theta == 0:
+        k_a = 0.8
+    elif theta == 1:
         k_a = 1
-    ## Defender Favorable
     else:
-        k_d = 2
-        k_a = 0.5
+        k_a = 1.2
 
+    p = [0., 0., 0., 1., 1.]
 
     ## number of TSA agents
-    n_TSA = 0
-    if d[1] == 1:
-        n_TSA = 5
-    elif d[2] == 1:
-        n_TSA = 10
-    elif d[3] == 1:
-        n_TSA = 15
-    elif d[4] == 1:
-        n_TSA = 20
+    if d[0] == 1:
+        n_TSA = 6
+        p[1] = 0.01
+        p[2] = 0.1
+    elif d[1] == 1:
+        n_TSA = 12
+        p[1] = 0.05
+        p[2] = 0.01
+    else:
+        n_TSA = 18
+        p[1] = 0.1
+        p[2] = 0.01
 
     ## number of non-TSA agents
-    n_nonTSA = 0
-    if d[8] == 1:
-        n_nonTSA = 5
-    elif d[9] == 1:
-        n_nonTSA = 10
+    if d[3] == 1:
+        n_nonTSA = 4
+    elif d[4] == 1:
+        n_nonTSA = 8
+    else:
+        n_nonTSA = 12
 
     n_staff = n_TSA + n_nonTSA
 
-    ca1 = 100
-    if n_staff <= 10:
-        ca2 = 10
-        ca3 = 0.5
-    elif n_staff <= 20:
-        ca2 = 7
-        ca3 = 0.3
-    else:
-        ca2 = 5
-        ca3 = 0.2
 
-    return k_d * ((r[0]+r[1])- np.dot(curr_c.sum(0), d)) - k_a * (a[0]*ca1 + a[1]*ca2 + a[2]*ca3)*1000
+    cost_a = [0., 100000., 10000., 0., 0.]
+
+    n_camera = np.sum(d[6:])
+
+    if n_staff <= 10:
+        cost_a[3] = 5000
+        cost_a[4] = 5000
+        cost_passenger = 0.1 * (10-n_camera)
+    elif n_staff <= 20:
+        cost_a[3] = 2100
+        cost_a[4] = 2100
+        cost_passenger = 0.07 * (7-n_camera)
+    else:
+        cost_a[3] = 1000
+        cost_a[4] = 1000
+        cost_passenger = 0.05 * (5-n_camera)
+
+
+    u -= cost_a[a] * p[a] * k_a
+    u -= cost_passenger
+    u -= np.dot(c, d[3:])
+
+    return u
 
 
 def Reward(d, s, c, order=0):
@@ -86,12 +89,13 @@ def Reward(d, s, c, order=0):
     Returns:
         r: Reward value.
     """
-    r = 0
-    for theta in Random_events(s):
-        for a in Attacker_actions(s):
-            r += theta_given_s(theta, s) * a_given_s(a, s, order=order) *\
-                u_D(d, a, s, theta, c)
-    return r
+    R = 0
+    for theta in Random_events():
+        for a in [0,1,2,3,4]:
+            R += theta_given_s(theta, s[0][0]) * a_given_s(a, s[0][0]) *\
+                u_D(d, a, theta, c)
+    return R
+
 
 
 
